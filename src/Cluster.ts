@@ -1,10 +1,19 @@
 export class Cluster<T> {
   private instances: Map<T, boolean> = new Map();
+  private maxInstances: number;
+  private instanceCreator: () => T;
   private waitBetweenRetriesMs: number;
   private defaultMaxRetries: number;
 
-  constructor(waitBetweenRetriesMs: number = 1000, defaultMaxRetries: number = 0) {
-    this.waitBetweenRetriesMs = waitBetweenRetriesMs
+  constructor(
+    clusterSize: number,
+    instanceCreator: () => T,
+    waitBetweenRetriesMs: number = 1000,
+    defaultMaxRetries: number = 0
+  ) {
+    this.maxInstances = clusterSize;
+    this.instanceCreator = instanceCreator;
+    this.waitBetweenRetriesMs = waitBetweenRetriesMs;
     this.defaultMaxRetries = defaultMaxRetries;
   }
 
@@ -23,21 +32,40 @@ export class Cluster<T> {
       throw new Error('Max retries exceeded');
     }
 
-    await new Promise((_) => setTimeout(_, waitBeforeTrying));
+    if (waitBeforeTrying > 0) {
+      console.debug(
+        `Waiting ${waitBeforeTrying}ms before attempting to acquire instance again`
+      );
+      await new Promise((_) => setTimeout(_, waitBeforeTrying));
+    }
 
-    const freeInstance = [...this.instances].find(([_, inUse]) => !inUse)?.[0];
+    const freeInstances = [...this.instances]
+      .filter(([_, inUse]) => !inUse)
+      .map(([instance, _]) => instance);
 
-    if (!freeInstance) {
+    if (freeInstances.length == 0) {
+      if (this.instances.size < this.maxInstances) {
+        const newInstance = this.instanceCreator();
+        this.instances.set(newInstance, true);
+        return Promise.resolve(this.instanceCreator());
+      }
       const retryingAttemptText = `${retry}${
         maxRetries > 1 ? `/${maxRetries}` : ''
       }`;
-      console.info(
+      console.debug(
         `Could not acquire instance. Retrying ${retryingAttemptText}`
       );
-      return this.acquire(waitBetweenRetries, maxRetries, waitBetweenRetries, retry + 1);
+      return this.acquire(
+        waitBetweenRetries,
+        maxRetries,
+        waitBetweenRetries,
+        retry + 1
+      );
     }
 
-    return Promise.resolve(freeInstance);
+    const instance = freeInstances[0];
+    this.instances.set(instance, true);
+    return Promise.resolve(instance);
   }
 
   private release(instance: T): void {
