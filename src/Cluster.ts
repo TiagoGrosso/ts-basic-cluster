@@ -9,7 +9,7 @@ export class Cluster<T> {
     clusterSize: number,
     instanceCreator: () => T,
     waitBetweenRetriesMs: number = 1000,
-    defaultMaxRetries: number = 0
+    defaultMaxRetries: number = 0,
   ) {
     this.maxInstances = clusterSize;
     this.instanceCreator = instanceCreator;
@@ -26,7 +26,7 @@ export class Cluster<T> {
     waitBetweenRetries: number = this.waitBetweenRetriesMs,
     maxRetries: number = this.defaultMaxRetries,
     waitBeforeTrying: number = 0,
-    retry: number = 0
+    retry: number = 0,
   ): Promise<T> {
     if (maxRetries > 1 && retry > maxRetries) {
       throw new Error('Max retries exceeded');
@@ -34,7 +34,7 @@ export class Cluster<T> {
 
     if (waitBeforeTrying > 0) {
       console.debug(
-        `Waiting ${waitBeforeTrying}ms before attempting to acquire instance again`
+        `Waiting ${waitBeforeTrying}ms before attempting to acquire instance again`,
       );
       await new Promise((_) => setTimeout(_, waitBeforeTrying));
     }
@@ -53,13 +53,13 @@ export class Cluster<T> {
         maxRetries > 1 ? `/${maxRetries}` : ''
       }`;
       console.debug(
-        `Could not acquire instance. Retrying ${retryingAttemptText}`
+        `Could not acquire instance. Retrying ${retryingAttemptText}`,
       );
       return this.acquire(
         waitBetweenRetries,
         maxRetries,
         waitBetweenRetries,
-        retry + 1
+        retry + 1,
       );
     }
 

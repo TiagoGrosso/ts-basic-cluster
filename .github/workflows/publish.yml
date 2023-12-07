@@ -1,0 +1,66 @@
+name: Publish npm package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Bump Version
+        default: X.Y.X
+        required: true
+
+jobs:
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install node packages
+        run: npm install
+      - name: Check format
+        run: npm run check-format
+
+  create-release:
+    needs: 
+        - check-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: release/${{ github.event.inputs.version }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          release_name: ${{ github.event.inputs.version }}
+          body: Release ${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+
+  publish:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.version }}
+      - uses: oleksiyrudenko/gha-git-credentials@v2-latest
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install node packages
+        run: npm install
+      - name: Set package version
+        run: npm version ${{ github.event.inputs.version }}
+      - name: Build project
+        run: npm run build
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
