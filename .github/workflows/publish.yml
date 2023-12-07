@@ -38,7 +38,7 @@ jobs:
       - name: Build project
         run: npm run build
       - name: Set package version
-        run: npm version ${{ github.event.inputs.version }}
+        run: npm version ${{ github.event.inputs.version }} --git-tag-version false
       - name: Publish to NPM
         uses: JS-DevTools/npm-publish@v3
         with:
@@ -47,7 +47,7 @@ jobs:
         uses: EndBug/add-and-commit@v9
         with:
           add: '.'
-          message: 'Release ${{ github.event.inputs.version }}'
+          message: 'ci: release ${{ github.event.inputs.version }}'
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
