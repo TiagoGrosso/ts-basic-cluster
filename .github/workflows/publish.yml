@@ -11,56 +11,45 @@ jobs:
   check-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '16.x'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       - name: Install node packages
         run: npm install
       - name: Check format
         run: npm run check-format
 
-  create-release:
-    needs: 
-        - check-format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: release/${{ github.event.inputs.version }}
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          release_name: ${{ github.event.inputs.version }}
-          body: Release ${{ github.event.inputs.version }}
-          draft: false
-          prerelease: false
-
   publish:
-    needs: create-release
+    needs: check-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.inputs.version }}
+      - uses: actions/checkout@v4
       - uses: oleksiyrudenko/gha-git-credentials@v2-latest
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: '16.x'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       - name: Install node packages
         run: npm install
-      - name: Set package version
-        run: npm version ${{ github.event.inputs.version }}
       - name: Build project
         run: npm run build
-      - uses: JS-DevTools/npm-publish@v1
+      - name: Set package version
+        run: npm version ${{ github.event.inputs.version }}
+      - name: Publish to NPM
+        uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '.'
+          message: 'Release ${{ github.event.inputs.version }}'
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.event.inputs.version }}
+          body: Release ${{ github.event.inputs.version }}

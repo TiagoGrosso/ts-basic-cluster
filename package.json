@@ -1,6 +1,6 @@
 {
-  "name": "simple-cluster",
-  "version": "0.1.0",
+  "name": "basic-cluster",
+  "version": "0.0.1",
   "description": "Run multiple async tasks in parallel",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
