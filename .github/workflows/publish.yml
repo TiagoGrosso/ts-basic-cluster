@@ -26,9 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oleksiyrudenko/gha-git-credentials@v2-latest
         with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
+          token: '${{ secrets.REPO_PAT }}'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -39,10 +38,6 @@ jobs:
         run: npm run build
       - name: Set package version
         run: npm version ${{ github.event.inputs.version }} --git-tag-version false
-      - name: Publish to NPM
-        uses: JS-DevTools/npm-publish@v3
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
         with:
@@ -53,3 +48,7 @@ jobs:
         with:
           tag: ${{ github.event.inputs.version }}
           body: Release ${{ github.event.inputs.version }}
+      - name: Publish to NPM
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
