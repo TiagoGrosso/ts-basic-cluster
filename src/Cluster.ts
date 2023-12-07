@@ -1,20 +1,19 @@
 export class Cluster<T> {
   private instances: Map<T, boolean> = new Map();
   private maxInstances: number;
-  private instanceCreator: () => T;
+  private instanceCreator: () => T | Promise<T>;
   private waitBetweenRetriesMs: number;
   private defaultMaxRetries: number;
 
   constructor(
     clusterSize: number,
-    instanceCreator: () => T,
-    waitBetweenRetriesMs: number = 1000,
-    defaultMaxRetries: number = 0,
+    instanceCreator: () => T | Promise<T>,
+    optionalParams: ClusterOptionalParams = {},
   ) {
     this.maxInstances = clusterSize;
     this.instanceCreator = instanceCreator;
-    this.waitBetweenRetriesMs = waitBetweenRetriesMs;
-    this.defaultMaxRetries = defaultMaxRetries;
+    this.waitBetweenRetriesMs = optionalParams.waitBetweenRetriesMs;
+    this.defaultMaxRetries = optionalParams.defaultMaxRetries;
   }
 
   async submit(task: (i: T) => Promise<void>): Promise<void> {
@@ -45,7 +44,7 @@ export class Cluster<T> {
 
     if (freeInstances.length == 0) {
       if (this.instances.size < this.maxInstances) {
-        const newInstance = this.instanceCreator();
+        const newInstance = await this.instanceCreator();
         this.instances.set(newInstance, true);
         return Promise.resolve(this.instanceCreator());
       }
@@ -71,4 +70,9 @@ export class Cluster<T> {
   private release(instance: T): void {
     this.instances.set(instance, false);
   }
+}
+
+export interface ClusterOptionalParams {
+  waitBetweenRetriesMs?;
+  defaultMaxRetries?;
 }
