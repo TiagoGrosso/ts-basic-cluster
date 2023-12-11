@@ -31,7 +31,6 @@ export class Cluster<T extends Instance> {
 
   private async acquire(): Promise<T> {
     return backOff<T>(async () => {
-
       const freeInstances = [...this.instances]
         .filter(([_, inUse]) => !inUse)
         .map(([instance, _]) => instance);
