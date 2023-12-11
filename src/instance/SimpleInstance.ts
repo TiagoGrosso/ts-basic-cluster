@@ -1,6 +1,12 @@
 import { Instance } from './Instance';
 
-export class EmptyInstance implements Instance {
+export class SimpleInstance<T> implements Instance {
+    private value: T;
+
+    constructor(value: T) {
+        this.value = value;
+    }
+
     shutdown(): void | Promise<void> {
         console.trace('Nothing to do on shutdown');
     }
