@@ -1,3 +1,3 @@
 export interface Instance {
-  shutdown(): void | Promise<void>;
+    shutdown(): void | Promise<void>;
 }
