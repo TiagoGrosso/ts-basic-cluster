@@ -8,6 +8,6 @@ export class SimpleInstance<T> implements Instance {
     }
 
     shutdown(): void | Promise<void> {
-        console.trace('Nothing to do on shutdown');
+        // Nothing to do on shutdown
     }
 }
