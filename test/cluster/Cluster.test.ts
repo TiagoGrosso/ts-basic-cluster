@@ -114,15 +114,16 @@ describe('Cluster', () => {
         cluster.submit(async () => {
             await new Promise((_) => setTimeout(_, 1000));
         });
-        const secondTask = cluster.submit(async () => {
-            await new Promise((_) => setTimeout(_, 1000));
-        });
+        const secondTask = cluster.submit(async () => {});
         
         await new Promise((_) => setTimeout(_, 100));
 
         const shutdownPromise = cluster.shutdown();
 
-        expect(secondTask).rejects.toContain("Cannot submit new tasks because the cluster is shutting down");
+        const thirdPromise = cluster.submit(async () => {});
+
+        expect(thirdPromise).rejects.toContain("Cannot submit new tasks because the cluster is shutting down");
+        expect(secondTask).rejects.toContain("Cannot submit new tasks because the cluster has been shutdown");
 
         return shutdownPromise.then(() => {
             const newAttemp = cluster.submit(async () => {});

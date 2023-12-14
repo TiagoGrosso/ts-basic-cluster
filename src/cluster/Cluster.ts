@@ -31,15 +31,19 @@ export class Cluster<T extends Instance> {
             return Promise.resolve();
         }
 
+        this.state = 'shutting down';
+
         return backOff(() => {
+            console.warn(this.instances)
+            console.warn(new Date())
             const instancesInUse = [...this.instances].filter(([_, inUse]) => inUse).length;
             if (instancesInUse > 0) {
                 throw new Error(`${instancesInUse} still in use`);
             }
-            return this.shutdownNow();
+            return this.performShutdown();
         }, backoffOptions).catch(() => {
             console.warn('Forcefully shutting down cluster after graceful shutdown failure');
-            return this.shutdownNow();
+            return this.performShutdown();
         });
     }
 
@@ -49,6 +53,10 @@ export class Cluster<T extends Instance> {
             return Promise.resolve();
         }
         this.state = 'shutting down';
+        return this.performShutdown();
+    }
+
+    private async performShutdown(): Promise<any> {
         const promises: Promise<void>[] = [...this.instances].map(async ([instance, _]) => await instance.shutdown());
         return Promise.all(promises).then(() => this.state = 'shutdown');
     }
