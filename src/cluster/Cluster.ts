@@ -5,70 +5,71 @@ export class Cluster<T extends Instance> {
     protected instances: Map<T, boolean> = new Map();
     private maxInstances: number;
     private instanceCreator: () => T | Promise<T>;
-    private defaultBackoffOptions?: BackoffOptions;
+    private defaultBackoffOptions?: ClusterBackoffOptions;
     private state: ClusterState;
-    private running: Promise<any>[];
 
-    constructor(clusterSize: number, instanceCreator: () => T | Promise<T>, defaultBackoffOptions?: BackoffOptions) {
+    constructor(
+        clusterSize: number,
+        instanceCreator: () => T | Promise<T>,
+        defaultBackoffOptions?: ClusterBackoffOptions
+    ) {
         this.maxInstances = clusterSize;
         this.instanceCreator = instanceCreator;
         this.defaultBackoffOptions = defaultBackoffOptions;
         this.state = 'ready';
-        this.running = [];
     }
 
     public async submit(
         task: (i: T) => Promise<void>,
-        backoffOptions: BackoffOptions = this.defaultBackoffOptions
+        backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions
     ): Promise<void> {
-        const instance: T = await this.acquire(backoffOptions);
-        return await task(instance).finally(() => this.release(instance));
+        return this.acquire(backoffOptions).then((instance) => task(instance).finally(() => this.release(instance)));
     }
 
-    public async shutdown(backoffOptions: BackoffOptions = this.defaultBackoffOptions): Promise<any> {
+    public async shutdown(backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions): Promise<boolean> {
         if (this.state !== 'ready') {
             console.log('Cluster is already shutdown or is shutting down');
-            return Promise.resolve();
+            return Promise.resolve(false);
         }
 
         this.state = 'shutting down';
 
         return backOff(() => {
-            console.warn(this.instances)
-            console.warn(new Date())
             const instancesInUse = [...this.instances].filter(([_, inUse]) => inUse).length;
             if (instancesInUse > 0) {
                 throw new Error(`${instancesInUse} still in use`);
             }
             return this.performShutdown();
-        }, backoffOptions).catch(() => {
-            console.warn('Forcefully shutting down cluster after graceful shutdown failure');
-            return this.performShutdown();
-        });
+        }, this.getBackoffOptions(backoffOptions))
+            .catch(() => {
+                console.warn('Forcefully shutting down cluster after graceful shutdown failure');
+                return this.performShutdown();
+            })
+            .then(() => Promise.resolve(true));
     }
 
-    public async shutdownNow(): Promise<any> {
+    public async shutdownNow(): Promise<boolean> {
         if (this.state !== 'ready') {
             console.log('Cluster is already shutdown or is shutting down');
-            return Promise.resolve();
+            return Promise.resolve(false);
         }
         this.state = 'shutting down';
-        return this.performShutdown();
+        return this.performShutdown().then(() => Promise.resolve(true));
     }
 
     private async performShutdown(): Promise<any> {
-        const promises: Promise<void>[] = [...this.instances].map(async ([instance, _]) => await instance.shutdown());
-        return Promise.all(promises).then(() => this.state = 'shutdown');
+        const promises: Promise<void>[] = [...this.instances].map(async ([instance, _]) => instance.shutdown());
+        return Promise.all(promises).then(() => (this.state = 'shutdown'));
     }
 
-    private async acquire(backoffOptions: BackoffOptions = this.defaultBackoffOptions): Promise<T> {
+    private async acquire(backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions): Promise<T> {
         return backOff<T>(async () => {
             if (this.state === 'shutting down') {
-                return Promise.reject('Cannot submit new tasks because the cluster is shutting down');
+                throw new UnretryableError('Cannot submit new tasks because the cluster is shutting down');
             }
 
             if (this.state === 'shutdown') {
-                return Promise.reject('Cannot submit new tasks because the cluster has been shutdown');
+                throw new UnretryableError('Cannot submit new tasks because the cluster has been shutdown');
             }
 
             const freeInstances = [...this.instances].filter(([_, inUse]) => !inUse).map(([instance, _]) => instance);
@@ -90,12 +91,25 @@ export class Cluster<T extends Instance> {
             const instance = freeInstances[0];
             this.instances.set(instance, true);
             return Promise.resolve(instance);
-        }, backoffOptions);
+        }, this.getBackoffOptions(backoffOptions)).catch((error: Error) => {
+            return Promise.reject(error.message);
+        });
     }
 
     private release(instance: T): void {
         this.instances.set(instance, false);
     }
+
+    private getBackoffOptions(clusterBackoffOptions: ClusterBackoffOptions): BackoffOptions {
+        return {
+            ...clusterBackoffOptions,
+            retry: (error) => !(error instanceof UnretryableError),
+        };
+    }
 }
 
+class UnretryableError extends Error {}
+
 type ClusterState = 'shutdown' | 'shutting down' | 'ready';
+
+export type ClusterBackoffOptions = Omit<BackoffOptions, 'retry'>;

@@ -70,7 +70,8 @@ describe('Cluster', () => {
 
         await new Promise((_) => setTimeout(_, 100));
 
-        await cluster.shutdownNow();
+        const shutdownResult = await cluster.shutdownNow();
+        expect(shutdownResult).toBeTruthy();
 
         expect(done).toBeFalsy();
     });
@@ -88,7 +89,10 @@ describe('Cluster', () => {
 
         const shutdownPromise = cluster.shutdown();
         expect(done).toBeFalsy();
-        return shutdownPromise.then(() => expect(done).toBeTruthy());
+
+        const shutdownResult = await shutdownPromise;
+        expect(shutdownResult).toBeTruthy();
+        expect(done).toBeTruthy();
     });
 
     it('forcefully shuts down after failing to do so gracefully', async () => {
@@ -101,35 +105,51 @@ describe('Cluster', () => {
         });
         await new Promise((_) => setTimeout(_, 100));
 
-        await cluster.shutdown({
-            retry: () => false,
+        const shutdownResult = await cluster.shutdown({
+            numOfAttempts: 1,
         });
+
+        expect(shutdownResult).toBeTruthy();
 
         expect(done).toBeFalsy();
     });
 
     it('does not accept more tasks after shutdown', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<Instance>(1, () => ({
+            shutdown() {
+                return new Promise((_) => setTimeout(_, 1000));
+            },
+        }));
 
         cluster.submit(async () => {
             await new Promise((_) => setTimeout(_, 1000));
         });
         const secondTask = cluster.submit(async () => {});
-        
+
         await new Promise((_) => setTimeout(_, 100));
 
         const shutdownPromise = cluster.shutdown();
 
-        const thirdPromise = cluster.submit(async () => {});
+        expect(secondTask).rejects.toContain('Cannot submit new tasks because the cluster is shutting down');
 
-        expect(thirdPromise).rejects.toContain("Cannot submit new tasks because the cluster is shutting down");
-        expect(secondTask).rejects.toContain("Cannot submit new tasks because the cluster has been shutdown");
+        const shutdownResult = await shutdownPromise;
+        expect(shutdownResult).toBeTruthy();
 
-        return shutdownPromise.then(() => {
-            const newAttemp = cluster.submit(async () => {});
-            return expect(newAttemp).rejects.toContain("Cannot submit new tasks because the cluster has been shutdown")
-        }).catch(() => {
-            throw new Error('Should never reach this');
-        })
+        const newAttempt = cluster.submit(async () => {});
+        return expect(newAttempt).rejects.toContain('Cannot submit new tasks because the cluster has been shutdown');
+    });
+
+    it('does not shutdown twice', async () => {
+        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+
+        expect(cluster.shutdown()).resolves.toBeTruthy();
+        expect(cluster.shutdown()).resolves.toBeFalsy();
+    });
+
+    it('does not shutdown twice (force shutdown)', async () => {
+        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+
+        expect(cluster.shutdownNow()).resolves.toBeTruthy();
+        expect(cluster.shutdownNow()).resolves.toBeFalsy();
     });
 });
