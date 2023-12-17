@@ -1,9 +1,8 @@
-import { Cluster } from './Cluster';
+import { Cluster, ClusterBackoffOptions } from './Cluster';
 import { EmptyInstance } from '../instance/EmptyInstance';
-import { BackoffOptions } from 'exponential-backoff';
 
 export class BasicCluster extends Cluster<EmptyInstance> {
-    public constructor(clusterSize: number, backoffOptions?: BackoffOptions) {
+    public constructor(clusterSize: number, backoffOptions?: ClusterBackoffOptions) {
         super(clusterSize, () => new EmptyInstance(), backoffOptions);
     }
 }
