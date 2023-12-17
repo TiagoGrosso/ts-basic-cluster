@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/basic-cluster.svg?style=flat-square)](https://www.npmjs.org/package/basic-cluster)
 [![codecov](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster/branch/master/graph/badge.svg?token=1WBXW0RE0Q)](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster)
-[![install size](https://packagephobia.com/badge?p=instagram-graph-api)](https://packagephobia.com/result?p=instagram-graph-api)
+[![install size](https://packagephobia.com/badge?p=basic-cluster)](https://packagephobia.com/result?p=basic-cluster)
 [![npm downloads](https://img.shields.io/npm/dm/basic-cluster.svg?style=flat-square)](http://npm-stat.com/charts.html?package=basic-cluster)
 ![License](https://img.shields.io/npm/l/basic-cluster)
 
