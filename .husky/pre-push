@@ -1,8 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "Linting commit message..."
-npm run check-commit-message
 echo "Checking code style and format"
 npm run check-format
 echo "Running unit tests with coverage..."

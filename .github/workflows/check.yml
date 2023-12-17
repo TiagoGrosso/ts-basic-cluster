@@ -11,14 +11,17 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
             - uses: actions/setup-node@v4
               with:
                   node-version: '20'
                   registry-url: 'https://registry.npmjs.org'
             - name: Install node packages
-              run: npm install
-            - name: Run tests with coverage
-              run: npm run check-commit-message
+              run: npm install  
+            - name: Validate PR commits with commitlint
+              if: github.event_name == 'pull_request'
+              run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
     build:
         runs-on: ubuntu-latest

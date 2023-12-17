@@ -23,7 +23,6 @@
         "test": "jest --coverage",
         "format": "prettier --write src",
         "check-format": "prettier --check src",
-        "check-commit-message": "commitlint --edit",
         "prepare": "husky install"
     },
     "dependencies": {
