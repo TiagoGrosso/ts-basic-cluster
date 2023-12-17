@@ -1,12 +1,14 @@
 {
     "name": "basic-cluster",
     "version": "0.4.0",
-    "description": "Run multiple async tasks in parallel",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
         "/dist"
     ],
+    "dependencies": {
+        "exponential-backoff": "^3.1.1"
+    },
     "devDependencies": {
         "@commitlint/cli": "^18.4.3",
         "@commitlint/config-angular": "^18.4.3",
@@ -28,7 +30,21 @@
         "prepare": "husky install",
         "commit": "commit"
     },
-    "dependencies": {
-        "exponential-backoff": "^3.1.1"
-    }
+    "keywords": [
+        "lib",
+        "cluster",
+        "async",
+        "parallel"
+    ],
+    "author": "Tiago Grosso <tiagogrosso99@gmail.com>",
+    "license": "MIT",
+    "description": "Run multiple async tasks in parallel",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TiagoGrosso/ts-basic-cluster.git"
+    },
+    "bugs": {
+        "url": "https://github.com/TiagoGrosso/ts-basic-cluster/issues"
+    },
+    "homepage": "https://github.com/TiagoGrosso/ts-basic-cluster#readme"
 }
