@@ -5,7 +5,7 @@ import type { Config } from '@jest/types';
 const config: Config.InitialOptions = {
     testEnvironment: 'node',
     preset: 'ts-jest',
-    collectCoverageFrom: ['**/src/**/*.ts', '!src/index.ts'],
+    collectCoverageFrom: ['**/src/main/**/*.ts', '!src/main/index.ts'],
     testTimeout: 240000,
     coverageThreshold: {
         global: {

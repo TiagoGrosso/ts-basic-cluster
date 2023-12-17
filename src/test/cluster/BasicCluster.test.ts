@@ -1,4 +1,4 @@
-import { BasicCluster } from '../../src/cluster/BasicCluster';
+import { BasicCluster } from '../../main/cluster/BasicCluster';
 
 describe('BasicCluster', () => {
     it('does nothing on shutdown', async () => {

@@ -8,7 +8,10 @@
         "/dist"
     ],
     "devDependencies": {
+        "@commitlint/cli": "^18.4.3",
+        "@commitlint/config-conventional": "^18.4.3",
         "@types/jest": "^29.5.11",
+        "husky": "^8.0.3",
         "jest": "^29.7.0",
         "prettier": "^3.1.0",
         "ts-jest": "^29.1.1",
@@ -17,7 +20,11 @@
     },
     "scripts": {
         "build": "tsc",
-        "check-format": "prettier --check src"
+        "test": "jest --coverage",
+        "format": "prettier --write src",
+        "check-format": "prettier --check src",
+        "check-commit-message": "commitlint --edit",
+        "prepare": "husky install"
     },
     "dependencies": {
         "exponential-backoff": "^3.1.1"

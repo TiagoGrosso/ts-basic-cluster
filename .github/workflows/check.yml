@@ -1,0 +1,64 @@
+name: Check code
+on:
+    push:
+        branches:
+            - 'master'
+    pull_request:
+        branches:
+            - '*'
+jobs:
+    check-commit-message:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Install node packages
+              run: npm install
+            - name: Run tests with coverage
+              run: npm run check-commit-message
+
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-node@v1
+              with:
+                  node-version: '20'
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Install node packages
+              run: npm install
+            - name: Build project
+              run: npm run build
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Install node packages
+              run: npm install
+            - name: Run tests with coverage
+              run: npm test
+            - name: Upload coverage reports to Codecov
+              uses: codecov/codecov-action@v3
+              env:
+                  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+    check-format:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Install node packages
+              run: npm install
+            - name: Check format
+              run: npm run check-format

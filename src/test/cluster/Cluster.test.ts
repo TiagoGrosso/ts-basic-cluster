@@ -1,6 +1,6 @@
-import { Cluster } from '../../src/cluster/Cluster';
-import { EmptyInstance } from '../../src/instance/EmptyInstance';
-import { Instance } from '../../src/instance/Instance';
+import { Cluster } from '../../main/cluster/Cluster';
+import { EmptyInstance } from '../../main/instance/EmptyInstance';
+import { Instance } from '../../main/instance/Instance';
 
 describe('Cluster', () => {
     it('executes tasks with max parallel rate', async () => {
