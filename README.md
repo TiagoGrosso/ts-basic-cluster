@@ -78,7 +78,7 @@ The `SimpleInstance` is a utility for when you need an instance with some state 
 let i = 0;
 const cluster: Cluster<SimpleInstance<number>> = new Cluster(3, () => new SimpleInstance(++i));
 cluster.submit((instance) => {
-  console.log(`Running task on instance ${instance}`)
+  console.log(`Running task on instance ${instance.getValue()}`)
   // do something with the instance
 })
 ```

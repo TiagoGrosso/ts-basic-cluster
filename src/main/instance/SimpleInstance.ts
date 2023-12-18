@@ -10,4 +10,8 @@ export class SimpleInstance<T> implements Instance {
     shutdown(): void | Promise<void> {
         // Nothing to do on shutdown
     }
+
+    public getValue(): T {
+        return this.value;
+    }
 }
