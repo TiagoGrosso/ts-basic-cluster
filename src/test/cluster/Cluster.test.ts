@@ -152,4 +152,13 @@ describe('Cluster', () => {
         expect(cluster.shutdownNow()).resolves.toBeTruthy();
         expect(cluster.shutdownNow()).resolves.toBeFalsy();
     });
+
+    it('returns task value when it completes', async () => {
+        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const random = Math.floor(Math.random() * 1000);
+
+        const result = await cluster.submit(() => Promise.resolve(random));
+
+        expect(result).toEqual(random);
+    });
 });

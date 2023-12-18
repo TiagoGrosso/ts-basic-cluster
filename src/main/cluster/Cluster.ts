@@ -57,10 +57,10 @@ export class Cluster<T extends Instance> {
      * @param backoffOptions the exponential-backoff options to retry acquiring a free instance. If not provided, the cluster will use its default ones.
      * @returns a promise that completes when the task is done.
      */
-    public async submit(
-        task: (i: T) => Promise<void>,
+    public async submit<R>(
+        task: (i: T) => Promise<R>,
         backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions
-    ): Promise<void> {
+    ): Promise<R> {
         return this.acquire(backoffOptions).then((instance) => task(instance).finally(() => this.release(instance)));
     }
 
