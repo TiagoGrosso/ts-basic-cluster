@@ -1,7 +1,7 @@
 # Basic Cluster
 
 [![npm version](https://img.shields.io/npm/v/basic-cluster.svg?style=flat-square)](https://www.npmjs.org/package/basic-cluster)
-[![codecov](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster/branch/master/graph/badge.svg?token=1WBXW0RE0Q)](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster)
+[![codecov](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster/graph/badge.svg?token=EY1S8P222F)](https://codecov.io/gh/TiagoGrosso/ts-basic-cluster)
 [![install size](https://packagephobia.com/badge?p=basic-cluster)](https://packagephobia.com/result?p=basic-cluster)
 [![npm downloads](https://img.shields.io/npm/dm/basic-cluster.svg?style=flat-square)](http://npm-stat.com/charts.html?package=basic-cluster)
 ![License](https://img.shields.io/npm/l/basic-cluster)
@@ -61,7 +61,7 @@ If you no longer require the cluster, you can shut it down. There are two option
     1. After shutdown is requested, new task submissions are immediately rejected. Tasks waiting to be picked up will also be rejected.
     1. If there are running tasks, the cluster will retry to shutdown at a later time.
     1. When gracefully shutdown retries are exhausted, the cluster will forcefully shutdown.
-1. `Cluster#shutdownNow()` will forcefully shutdown the cluster, calling `shutdown()` on all its instances immediately. 
+1. `Cluster#shutdownNow()` will forcefully shutdown the cluster, calling `shutdown()` on all its instances immediately.
     1. This does not cancel running tasks, so depending on how their built and what stage their in, they might still complete successfully.
 
 ### Usage with instances
@@ -78,7 +78,7 @@ The `SimpleInstance` is a utility for when you need an instance with some state 
 let i = 0;
 const cluster: Cluster<SimpleInstance<number>> = new Cluster(3, () => new SimpleInstance(++i));
 cluster.submit((instance) => {
-  console.log(`Running task on instance ${instance.getValue()}`)
-  // do something with the instance
-})
+    console.log(`Running task on instance ${instance.getValue()}`);
+    // do something with the instance
+});
 ```
