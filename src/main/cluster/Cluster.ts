@@ -32,6 +32,11 @@ export class Cluster<T extends Instance> {
     private state: ClusterState;
 
     /**
+     * The instances whose creation is ongoing and the cluster is waiting on.
+     */
+    private instancesBeingCreated: Set<Promise<T>>;
+
+    /**
      * Constructor.
      *
      * @param clusterSize how many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
@@ -47,6 +52,7 @@ export class Cluster<T extends Instance> {
         this.instanceCreator = instanceCreator;
         this.defaultBackoffOptions = defaultBackoffOptions;
         this.state = 'ready';
+        this.instancesBeingCreated = new Set();
     }
 
     /**
@@ -136,12 +142,16 @@ export class Cluster<T extends Instance> {
             const freeInstances = [...this.instances].filter(([_, inUse]) => !inUse).map(([instance, _]) => instance);
 
             if (freeInstances.length == 0) {
-                if (this.instances.size < this.maxInstances) {
-                    const newInstance = await this.instanceCreator();
+                if (
+                    this.instances.size < this.maxInstances &&
+                    this.instancesBeingCreated.size < this.maxInstances - this.instances.size
+                ) {
+                    const newInstancePromise = this.getNewInstance();
+                    this.instancesBeingCreated.add(newInstancePromise);
 
-                    if (this.instances.size == this.maxInstances) {
-                        throw new Error();
-                    }
+                    const newInstance = await newInstancePromise.finally(() =>
+                        this.instancesBeingCreated.delete(newInstancePromise)
+                    );
 
                     this.instances.set(newInstance, true);
                     return Promise.resolve(newInstance);
@@ -155,6 +165,10 @@ export class Cluster<T extends Instance> {
         }, this.getBackoffOptions(backoffOptions)).catch((error: Error) => {
             return Promise.reject(error.message);
         });
+    }
+
+    private async getNewInstance(): Promise<T> {
+        return await this.instanceCreator();
     }
 
     private release(instance: T): void {

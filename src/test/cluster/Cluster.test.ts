@@ -161,4 +161,34 @@ describe('Cluster', () => {
 
         expect(result).toEqual(random);
     });
+
+    it('respects max instances even on async creator', async () => {
+        const maxInstances = 5;
+        let createdInstances = 0;
+        const cluster = new Cluster(
+            maxInstances,
+            async () => {
+                await new Promise((_) => setTimeout(_, 500));
+                createdInstances++;
+                return new EmptyInstance();
+            },
+            {
+                startingDelay: 1000,
+                maxDelay: 1000,
+            }
+        );
+
+        const promises: Promise<any>[] = [];
+
+        for (let i = 0; i < maxInstances * 3; ++i) {
+            promises.push(
+                cluster.submit(async () => {
+                    await new Promise((_) => setTimeout(_, 100));
+                })
+            );
+        }
+
+        await Promise.all(promises);
+        expect(createdInstances).toEqual(maxInstances);
+    });
 });
