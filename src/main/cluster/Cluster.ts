@@ -128,7 +128,7 @@ export class Cluster<T extends Instance> {
      *
      * @returns a promise that completes when the cluster has been successfully shutdown.
      */
-    private async performShutdown(): Promise<any> {
+    protected async performShutdown(): Promise<any> {
         const promises: Promise<void>[] = [...this.instances].map(async ([instance, _]) => instance.shutdown());
         return Promise.all(promises).then(() => (this.state = 'shutdown'));
     }
