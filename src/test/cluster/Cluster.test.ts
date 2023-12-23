@@ -1,12 +1,14 @@
-import { Cluster } from '../../main/cluster/Cluster';
+import { Cluster, ClusterOptions } from '../../main/cluster/Cluster';
 import { EmptyInstance } from '../../main/instance/EmptyInstance';
 import { Instance } from '../../main/instance/Instance';
 
 describe('Cluster', () => {
     it('executes tasks with max parallel rate', async () => {
         const cluster = new Cluster(3, () => new EmptyInstance(), {
-            startingDelay: 1000,
-            maxDelay: 1000,
+            defaultBackoffOptions: {
+                startingDelay: 1000,
+                maxDelay: 1000,
+            },
         });
 
         const done: number[] = [];
@@ -30,8 +32,10 @@ describe('Cluster', () => {
 
     it('overrides default backoff options', async () => {
         const cluster = new Cluster(3, () => new EmptyInstance(), {
-            startingDelay: 10000,
-            maxDelay: 10000,
+            defaultBackoffOptions: {
+                startingDelay: 10000,
+                maxDelay: 10000,
+            },
         });
 
         const done: number[] = [];
@@ -59,7 +63,7 @@ describe('Cluster', () => {
         expect(done.length).toBe(7);
     });
 
-    it('starts shutdown immeadiately when requested', async () => {
+    it('starts shutdown immediately when requested', async () => {
         const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
 
         let done = false;
@@ -76,23 +80,29 @@ describe('Cluster', () => {
         expect(done).toBeFalsy();
     });
 
-    it('waits for task completion before shutting down', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+    const possibleClusterOptions: (ClusterOptions | undefined)[] = [undefined, {}, { defaultBackoffOptions: {} }];
 
-        let done = false;
-        cluster.submit(async () => {
-            await new Promise((_) => setTimeout(_, 1000));
-            done = true;
+    describe('waits for task completion before shutting down', () => {
+        possibleClusterOptions.forEach((options) => {
+            test(`${possibleClusterOptions.indexOf(options)}`, async () => {
+                const cluster = new Cluster<Instance>(1, () => new EmptyInstance(), options);
+
+                let done = false;
+                cluster.submit(async () => {
+                    await new Promise((_) => setTimeout(_, 1000));
+                    done = true;
+                });
+
+                await new Promise((_) => setTimeout(_, 100));
+
+                const shutdownPromise = cluster.shutdown();
+                expect(done).toBeFalsy();
+
+                const shutdownResult = await shutdownPromise;
+                expect(shutdownResult).toBeTruthy();
+                expect(done).toBeTruthy();
+            });
         });
-
-        await new Promise((_) => setTimeout(_, 100));
-
-        const shutdownPromise = cluster.shutdown();
-        expect(done).toBeFalsy();
-
-        const shutdownResult = await shutdownPromise;
-        expect(shutdownResult).toBeTruthy();
-        expect(done).toBeTruthy();
     });
 
     it('forcefully shuts down after failing to do so gracefully', async () => {
@@ -172,10 +182,7 @@ describe('Cluster', () => {
                 createdInstances++;
                 return new EmptyInstance();
             },
-            {
-                startingDelay: 1000,
-                maxDelay: 1000,
-            }
+            { defaultBackoffOptions: { startingDelay: 1000, maxDelay: 1000 } }
         );
 
         const promises: Promise<any>[] = [];
@@ -189,6 +196,47 @@ describe('Cluster', () => {
         }
 
         await Promise.all(promises);
+        expect(createdInstances).toEqual(maxInstances);
+    });
+
+    it('eagerly creates instances', async () => {
+        const maxInstances = 5;
+        let createdInstances = 0;
+        const cluster = new Cluster(
+            maxInstances,
+            () => {
+                createdInstances++;
+                return new EmptyInstance();
+            },
+            { eagerInstances: true }
+        );
+
+        expect(createdInstances).toEqual(maxInstances);
+
+        await cluster.submit(async () => {});
+
+        expect(createdInstances).toEqual(maxInstances);
+    });
+
+    it('eagerly creates instances (async creator)', async () => {
+        const maxInstances = 5;
+        let createdInstances = 0;
+        const cluster = new Cluster(
+            maxInstances,
+            async () => {
+                await new Promise((_) => setTimeout(_, 500));
+                createdInstances++;
+                return new EmptyInstance();
+            },
+            { eagerInstances: true }
+        );
+
+        await new Promise((_) => setTimeout(_, 750));
+
+        expect(createdInstances).toEqual(maxInstances);
+
+        await cluster.submit(async () => {});
+
         expect(createdInstances).toEqual(maxInstances);
     });
 });

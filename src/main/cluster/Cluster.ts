@@ -22,9 +22,9 @@ export class Cluster<T extends Instance> {
     private instanceCreator: () => T | Promise<T>;
 
     /**
-     * the exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
+     * The cluster options. See {@link ClusterOptions}
      */
-    private defaultBackoffOptions?: ClusterBackoffOptions;
+    private clusterOptions?: ClusterOptions;
 
     /**
      * The cluster state.
@@ -42,17 +42,25 @@ export class Cluster<T extends Instance> {
      * @param clusterSize how many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
      * @param instanceCreator the function to call to create a new instance, when needed.
      * @param defaultBackoffOptions the exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
-     */
-    constructor(
-        clusterSize: number,
-        instanceCreator: () => T | Promise<T>,
-        defaultBackoffOptions?: ClusterBackoffOptions
-    ) {
+     */ 1;
+    constructor(clusterSize: number, instanceCreator: () => T | Promise<T>, clusterOptions?: ClusterOptions) {
         this.maxInstances = clusterSize;
         this.instanceCreator = instanceCreator;
-        this.defaultBackoffOptions = defaultBackoffOptions;
+        this.clusterOptions = clusterOptions;
         this.state = 'ready';
+        this.createInitialInstances(clusterOptions?.eagerInstances ?? false);
+    }
+
+    private createInitialInstances(eager: boolean): void {
         this.instancesBeingCreated = new Set();
+
+        if (!eager) {
+            return;
+        }
+
+        for (let i = 0; i < this.maxInstances; ++i) {
+            this.createNewInstance();
+        }
     }
 
     /**
@@ -65,19 +73,21 @@ export class Cluster<T extends Instance> {
      */
     public async submit<R>(
         task: (i: T) => Promise<R>,
-        backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions
+        backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
     ): Promise<R> {
         return this.acquire(backoffOptions).then((instance) => task(instance).finally(() => this.release(instance)));
     }
 
     /**
      * Attempts to gracefully shut down the cluster by waiting for any ongoing task to be completed before shutting down all instances.
-     * After the configured retries are exhausted, the cluster will initiate a forceful shutdown (see {@link #shutdownNow})
+     * After the configured retries are exhausted, the cluster will initiate a forceful shutdown (see {@link shutdownNow})
      *
      * @param backoffOptions the exponential-backoff options to retry the graceful shutdown. If not provided, the cluster will use its default ones.
      * @returns a promise that completes when the cluster has been successfully shutdown.
      */
-    public async shutdown(backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions): Promise<boolean> {
+    public async shutdown(
+        backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
+    ): Promise<boolean> {
         if (this.state !== 'ready') {
             console.log('Cluster is already shutdown or is shutting down');
             return Promise.resolve(false);
@@ -129,7 +139,9 @@ export class Cluster<T extends Instance> {
      * @param backoffOptions the exponential-backoff options to retry acquiring a free instance. If not provided, the cluster will use its default ones.
      * @returns a promise that resolves to the acquired instance.
      */
-    private async acquire(backoffOptions: ClusterBackoffOptions = this.defaultBackoffOptions): Promise<T> {
+    private async acquire(
+        backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
+    ): Promise<T> {
         return backOff<T>(async () => {
             if (this.state === 'shutting down') {
                 throw new UnretryableError('Cannot submit new tasks because the cluster is shutting down');
@@ -146,12 +158,8 @@ export class Cluster<T extends Instance> {
                     this.instances.size < this.maxInstances &&
                     this.instancesBeingCreated.size < this.maxInstances - this.instances.size
                 ) {
-                    const newInstancePromise = this.getNewInstance();
-                    this.instancesBeingCreated.add(newInstancePromise);
-
-                    const newInstance = await newInstancePromise.finally(() =>
-                        this.instancesBeingCreated.delete(newInstancePromise)
-                    );
+                    const newInstancePromise = this.createNewInstance();
+                    const newInstance = await newInstancePromise;
 
                     this.instances.set(newInstance, true);
                     return Promise.resolve(newInstance);
@@ -167,7 +175,18 @@ export class Cluster<T extends Instance> {
         });
     }
 
-    private async getNewInstance(): Promise<T> {
+    private createNewInstance() {
+        const newInstancePromise = this.getNewInstancePromise()
+            .then((instance) => {
+                this.instances.set(instance, false);
+                return instance;
+            })
+            .finally(() => this.instancesBeingCreated.delete(newInstancePromise));
+        this.instancesBeingCreated.add(newInstancePromise);
+        return newInstancePromise;
+    }
+
+    private async getNewInstancePromise(): Promise<T> {
         return await this.instanceCreator();
     }
 
@@ -197,3 +216,18 @@ type ClusterState = 'shutdown' | 'shutting down' | 'ready';
  * Options for the Cluster retries (instance acquisition & graceful shutdown).
  */
 export type ClusterBackoffOptions = Omit<BackoffOptions, 'retry'>;
+
+/**
+ * Options for the Cluster behavior.
+ */
+export interface ClusterOptions {
+    /**
+     * The exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
+     */
+    defaultBackoffOptions?: ClusterBackoffOptions;
+
+    /**
+     * Whether to create instances eagerly or lazily.
+     */
+    eagerInstances?: boolean;
+}
