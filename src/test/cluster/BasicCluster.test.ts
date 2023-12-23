@@ -15,8 +15,10 @@ describe('BasicCluster', () => {
 
     it('overrides default backoff options', async () => {
         const cluster = new BasicCluster(3, {
-            startingDelay: 10000,
-            maxDelay: 10000,
+            defaultBackoffOptions: {
+                startingDelay: 10000,
+                maxDelay: 10000,
+            },
         });
 
         const done: number[] = [];

@@ -1,4 +1,4 @@
-import { Cluster, ClusterBackoffOptions } from './Cluster';
+import { Cluster, ClusterBackoffOptions, ClusterOptions } from './Cluster';
 import { EmptyInstance } from '../instance/EmptyInstance';
 
 /**
@@ -13,7 +13,7 @@ export class BasicCluster extends Cluster<EmptyInstance> {
      * @param clusterSize how many instances the cluster can contain (and, conversely, how many tasks it can run in parallel)
      * @param defaultBackoffOptions the exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
      */
-    public constructor(clusterSize: number, defaultBackoffOptions?: ClusterBackoffOptions) {
-        super(clusterSize, () => new EmptyInstance(), defaultBackoffOptions);
+    public constructor(clusterSize: number, clusterOptions?: ClusterOptions) {
+        super(clusterSize, () => new EmptyInstance(), clusterOptions);
     }
 }
