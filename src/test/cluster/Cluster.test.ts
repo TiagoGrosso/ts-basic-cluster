@@ -1,4 +1,5 @@
 import { Cluster, ClusterOptions } from '../../main/cluster/Cluster';
+import { BasicInstance } from '../../main/instance/BasicInstance';
 import { EmptyInstance } from '../../main/instance/EmptyInstance';
 import { Instance } from '../../main/instance/Instance';
 
@@ -125,11 +126,15 @@ describe('Cluster', () => {
     });
 
     it('does not accept more tasks after shutdown', async () => {
-        const cluster = new Cluster<Instance>(1, () => ({
-            shutdown() {
-                return new Promise((_) => setTimeout(_, 1000));
-            },
-        }));
+        const cluster = new Cluster<Instance>(
+            1,
+            () =>
+                new (class extends BasicInstance {
+                    shutdown(): void | Promise<void> {
+                        return new Promise((_) => setTimeout(_, 1000));
+                    }
+                })()
+        );
 
         cluster.submit(async () => {
             await new Promise((_) => setTimeout(_, 1000));

@@ -9,7 +9,7 @@ export class Cluster<T extends Instance> {
     /**
      * The instances managed by this cluster mapped to whether they are free to pick up new tasks.
      */
-    protected instances: Map<T, boolean> = new Map();
+    protected instances: Set<T> = new Set();
 
     /**
      * How many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
@@ -42,8 +42,7 @@ export class Cluster<T extends Instance> {
      * @param clusterSize how many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
      * @param instanceCreator the function to call to create a new instance, when needed.
      * @param defaultBackoffOptions the exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
-     */ 1;
-    constructor(clusterSize: number, instanceCreator: () => T | Promise<T>, clusterOptions?: ClusterOptions) {
+     */ constructor(clusterSize: number, instanceCreator: () => T | Promise<T>, clusterOptions?: ClusterOptions) {
         this.maxInstances = clusterSize;
         this.instanceCreator = instanceCreator;
         this.clusterOptions = clusterOptions;
@@ -75,7 +74,7 @@ export class Cluster<T extends Instance> {
         task: (i: T) => Promise<R>,
         backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
     ): Promise<R> {
-        return this.acquire(backoffOptions).then((instance) => task(instance).finally(() => this.release(instance)));
+        return this.acquire(backoffOptions).then((instance) => instance.submit(task));
     }
 
     /**
@@ -96,7 +95,7 @@ export class Cluster<T extends Instance> {
         this.state = 'shutting down';
 
         return backOff(() => {
-            const instancesInUse = [...this.instances].filter(([_, inUse]) => inUse).length;
+            const instancesInUse = [...this.instances].filter((instance) => !instance.isFree()).length;
             if (instancesInUse > 0) {
                 throw new Error(`${instancesInUse} still in use`);
             }
@@ -129,7 +128,7 @@ export class Cluster<T extends Instance> {
      * @returns a promise that completes when the cluster has been successfully shutdown.
      */
     protected async performShutdown(): Promise<any> {
-        const promises: Promise<void>[] = [...this.instances].map(async ([instance, _]) => instance.shutdown());
+        const promises: Promise<void>[] = [...this.instances].map(async (instance) => instance.shutdown());
         return Promise.all(promises).then(() => (this.state = 'shutdown'));
     }
 
@@ -151,7 +150,7 @@ export class Cluster<T extends Instance> {
                 throw new UnretryableError('Cannot submit new tasks because the cluster has been shutdown');
             }
 
-            const freeInstances = [...this.instances].filter(([_, inUse]) => !inUse).map(([instance, _]) => instance);
+            const freeInstances = [...this.instances].filter((instance) => instance.isFree());
 
             if (freeInstances.length == 0) {
                 if (
@@ -161,14 +160,12 @@ export class Cluster<T extends Instance> {
                     const newInstancePromise = this.createNewInstance();
                     const newInstance = await newInstancePromise;
 
-                    this.instances.set(newInstance, true);
                     return Promise.resolve(newInstance);
                 }
                 throw new Error();
             }
 
             const instance = freeInstances[0];
-            this.instances.set(instance, true);
             return Promise.resolve(instance);
         }, this.getBackoffOptions(backoffOptions)).catch((error: Error) => {
             return Promise.reject(error.message);
@@ -178,7 +175,7 @@ export class Cluster<T extends Instance> {
     private createNewInstance() {
         const newInstancePromise = this.getNewInstancePromise()
             .then((instance) => {
-                this.instances.set(instance, false);
+                this.instances.add(instance);
                 return instance;
             })
             .finally(() => this.instancesBeingCreated.delete(newInstancePromise));
@@ -188,10 +185,6 @@ export class Cluster<T extends Instance> {
 
     private async getNewInstancePromise(): Promise<T> {
         return await this.instanceCreator();
-    }
-
-    private release(instance: T): void {
-        this.instances.set(instance, false);
     }
 
     private getBackoffOptions(clusterBackoffOptions: ClusterBackoffOptions): BackoffOptions {
