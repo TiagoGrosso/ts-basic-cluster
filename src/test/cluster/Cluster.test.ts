@@ -65,10 +65,10 @@ describe('Cluster', () => {
     });
 
     it('starts shutdown immediately when requested', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<{}>(1, () => new EmptyInstance());
 
         let done = false;
-        const promise = cluster.submit(async () => {
+        cluster.submit(async () => {
             await new Promise((_) => setTimeout(_, 1000));
             done = true;
         });
@@ -86,7 +86,7 @@ describe('Cluster', () => {
     describe('waits for task completion before shutting down', () => {
         possibleClusterOptions.forEach((options) => {
             test(`${possibleClusterOptions.indexOf(options)}`, async () => {
-                const cluster = new Cluster<Instance>(1, () => new EmptyInstance(), options);
+                const cluster = new Cluster<{}>(1, () => new EmptyInstance(), options);
 
                 let done = false;
                 cluster.submit(async () => {
@@ -107,7 +107,7 @@ describe('Cluster', () => {
     });
 
     it('forcefully shuts down after failing to do so gracefully', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<{}>(1, () => new EmptyInstance());
 
         let done = false;
         cluster.submit(async () => {
@@ -126,14 +126,14 @@ describe('Cluster', () => {
     });
 
     it('does not accept more tasks after shutdown', async () => {
-        const cluster = new Cluster<Instance>(
+        const cluster = new Cluster<{}>(
             1,
             () =>
-                new (class extends BasicInstance {
+                new (class extends BasicInstance<{}> {
                     shutdown(): void | Promise<void> {
                         return new Promise((_) => setTimeout(_, 1000));
                     }
-                })()
+                })({})
         );
 
         cluster.submit(async () => {
@@ -155,21 +155,21 @@ describe('Cluster', () => {
     });
 
     it('does not shutdown twice', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<{}>(1, () => new EmptyInstance());
 
         expect(cluster.shutdown()).resolves.toBeTruthy();
         expect(cluster.shutdown()).resolves.toBeFalsy();
     });
 
     it('does not shutdown twice (force shutdown)', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<{}>(1, () => new EmptyInstance());
 
         expect(cluster.shutdownNow()).resolves.toBeTruthy();
         expect(cluster.shutdownNow()).resolves.toBeFalsy();
     });
 
     it('returns task value when it completes', async () => {
-        const cluster = new Cluster<Instance>(1, () => new EmptyInstance());
+        const cluster = new Cluster<{}>(1, () => new EmptyInstance());
         const random = Math.floor(Math.random() * 1000);
 
         const result = await cluster.submit(() => Promise.resolve(random));

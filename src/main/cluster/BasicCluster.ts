@@ -1,4 +1,4 @@
-import { Cluster, ClusterBackoffOptions, ClusterOptions } from './Cluster';
+import { Cluster, ClusterOptions } from './Cluster';
 import { EmptyInstance } from '../instance/EmptyInstance';
 
 /**
@@ -6,7 +6,7 @@ import { EmptyInstance } from '../instance/EmptyInstance';
  *
  * Tasks submitted to this cluster will have an empty execution context.
  */
-export class BasicCluster extends Cluster<EmptyInstance> {
+export class BasicCluster extends Cluster<{}> {
     /**
      * Constructor.
      *

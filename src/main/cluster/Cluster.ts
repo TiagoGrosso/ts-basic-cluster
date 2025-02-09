@@ -1,15 +1,15 @@
-import { BackoffOptions, backOff } from 'exponential-backoff';
+import { backOff, BackoffOptions } from 'exponential-backoff';
 import { Instance } from '../instance/Instance';
 
 /**
  * A cluster manages a number of instances and accepts tasks to be submitted to those instances.
  * It allows multiple async tasks to be submitted in parallel in a throttled way to preserve resource usage.
  */
-export class Cluster<T extends Instance> {
+export class Cluster<C> {
     /**
      * The instances managed by this cluster mapped to whether they are free to pick up new tasks.
      */
-    protected instances: Set<T> = new Set();
+    protected instances: Set<Instance<C>> = new Set();
 
     /**
      * How many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
@@ -19,7 +19,7 @@ export class Cluster<T extends Instance> {
     /**
      * The function to call to create a new instance, when needed.
      */
-    private instanceCreator: () => T | Promise<T>;
+    private instanceCreator: () => Instance<C> | Promise<Instance<C>>;
 
     /**
      * The cluster options. See {@link ClusterOptions}
@@ -34,7 +34,7 @@ export class Cluster<T extends Instance> {
     /**
      * The instances whose creation is ongoing and the cluster is waiting on.
      */
-    private instancesBeingCreated: Set<Promise<T>>;
+    private instancesBeingCreated: Set<Promise<Instance<C>>>;
 
     /**
      * Constructor.
@@ -42,7 +42,11 @@ export class Cluster<T extends Instance> {
      * @param clusterSize how many instances the cluster can contain (and, conversely, how many tasks it can run in parallel).
      * @param instanceCreator the function to call to create a new instance, when needed.
      * @param defaultBackoffOptions the exponential-backoff options this cluster will use by default for retrying the acquisition of a free instance and for performing a graceful shutdown.
-     */ constructor(clusterSize: number, instanceCreator: () => T | Promise<T>, clusterOptions?: ClusterOptions) {
+     */ constructor(
+        clusterSize: number,
+        instanceCreator: () => Instance<C> | Promise<Instance<C>>,
+        clusterOptions?: ClusterOptions
+    ) {
         this.maxInstances = clusterSize;
         this.instanceCreator = instanceCreator;
         this.clusterOptions = clusterOptions;
@@ -71,7 +75,7 @@ export class Cluster<T extends Instance> {
      * @returns a promise that completes when the task is done.
      */
     public async submit<R>(
-        task: (i: T) => Promise<R>,
+        task: (i: C) => Promise<R>,
         backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
     ): Promise<R> {
         return this.acquire(backoffOptions).then((instance) => instance.submit(task));
@@ -140,8 +144,8 @@ export class Cluster<T extends Instance> {
      */
     private async acquire(
         backoffOptions: ClusterBackoffOptions = this.clusterOptions?.defaultBackoffOptions
-    ): Promise<T> {
-        return backOff<T>(async () => {
+    ): Promise<Instance<C>> {
+        return backOff<Instance<C>>(async () => {
             if (this.state === 'shutting down') {
                 throw new UnretryableError('Cannot submit new tasks because the cluster is shutting down');
             }
@@ -183,7 +187,7 @@ export class Cluster<T extends Instance> {
         return newInstancePromise;
     }
 
-    private async getNewInstancePromise(): Promise<T> {
+    private async getNewInstancePromise(): Promise<Instance<C>> {
         return await this.instanceCreator();
     }
 

@@ -9,6 +9,6 @@ describe('SimpleInstance', () => {
     it('gets value', () => {
         const random = Math.floor(Math.random() * 1000);
         const instance = new SimpleInstance(random);
-        expect(instance.getValue()).toEqual(random);
+        expect(instance.getContext()).toEqual(random);
     });
 });

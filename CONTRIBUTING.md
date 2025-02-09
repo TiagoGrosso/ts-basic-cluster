@@ -20,7 +20,7 @@ To help you follow Conventional Commits, you can use `npm run commit` to build y
 
 This repo is formatted using Prettier to minimize differences between files and bloated commit diffs from style changes. A `.prettier` file is provided in the repo and you should integrate Prettier in your editor. In case your editor does not support Prettier, execute `npm run format` when you want to format your code.
 
-The format checker runs on all Pull Requests. 
+The format checker runs on all Pull Requests.
 
 ### Testing
 
