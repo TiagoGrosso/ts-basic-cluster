@@ -6,7 +6,7 @@ import { EmptyInstance } from '../instance/EmptyInstance';
  *
  * Tasks submitted to this cluster will have an empty execution context.
  */
-export class BasicCluster extends Cluster<{}> {
+export class BasicCluster extends Cluster<never> {
     /**
      * Constructor.
      *

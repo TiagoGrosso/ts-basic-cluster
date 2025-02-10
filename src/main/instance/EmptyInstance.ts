@@ -3,9 +3,9 @@ import { SimpleInstance } from './SimpleInstance';
 /**
  * An instance with no inner objects to run tasks that don't require an execution context.
  */
-export class EmptyInstance extends SimpleInstance<{}> {
+export class EmptyInstance extends SimpleInstance<never> {
     constructor() {
-        super({});
+        super(undefined as never);
     }
 
     /**
